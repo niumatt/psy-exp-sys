@@ -23,11 +23,6 @@
         left-icon="thumb-up"
       />
       <t-cell 
-        title="实验地点" 
-        note="{{exp.location}}" 
-        left-icon="location" 
-      />
-      <t-cell 
         title="预计时长" 
         note="{{exp.expDurationMinutes}} 分钟" 
         left-icon="time" 
@@ -46,43 +41,52 @@
 
     <t-divider />
 
-    <t-cell-group theme="card">
-      <t-cell 
-        title="实验简介" 
-        description="{{exp.description || ''}}" 
-        left-icon="info-circle" 
-      />
-      <t-cell title="招募要求" left-icon="info-circle">
-        <view slot="description">
-          <view 
-            wx:for="{{exp.criteria}}" 
-            wx:key="index" 
+    <t-collapse theme="card" expandIcon>
+      <t-collapse-panel header="实验简介" value="{{0}}">
+        <view class="collapse-content">{{exp.description || '暂无简介'}}</view>
+      </t-collapse-panel>
+      <t-collapse-panel header="招募要求" value="{{1}}">
+        <view class="collapse-content">
+          <view
+            wx:for="{{exp.criteria}}"
+            wx:key="index"
             class="criteria-item"
           >{{item}}</view>
         </view>
-      </t-cell>
-    </t-cell-group>
+      </t-collapse-panel>
+      <t-collapse-panel header="实验地点" value="{{2}}">
+        <view class="collapse-content">{{exp.location || '暂无地点信息'}}</view>
+      </t-collapse-panel>
+      <t-collapse-panel header="实验时间" value="{{3}}">
+        <view wx:if="{{slotsTree.length === 0}}" class="collapse-content">暂无可用时间段</view>
+        <view wx:else class="slots-tree">
+          <view
+            wx:for="{{slotsTree}}"
+            wx:key="value"
+            class="slot-date-group"
+          >
+            <view class="slot-date-label">{{item.label}}</view>
+            <view
+              wx:for="{{item.children}}"
+              wx:for-item="slot"
+              wx:key="value"
+              class="slot-time-item {{slot.disabled ? 'slot-disabled' : ''}}"
+            >{{slot.label}}</view>
+          </view>
+        </view>
+      </t-collapse-panel>
+    </t-collapse>
 
-    <view wx:if="{{hasSurvey}}" class="survey-area">
+    <t-divider />
+
+    <view class="apply-area">
       <t-button
         theme="primary"
         size="medium"
         block="{{false}}"
         t-class="apply-btn"
-        disabled="{{surveyFilled}}"
-        content="{{surveyFilled ? '已填写' : '填写问卷'}}"
-        bind:tap="handleSurvey"
-      />
-    </view>
-
-    <view class="apply-area">
-      <t-button 
-        theme="primary" 
-        size="medium" 
-        block="{{false}}"
-        t-class="apply-btn{{applyDisabled ? ' apply-btn-disabled' : ''}}"
-        content="立即报名" 
-        bind:tap="handleApply" 
+        content="立即报名"
+        bind:tap="handleApply"
       />
     </view>
   </block>

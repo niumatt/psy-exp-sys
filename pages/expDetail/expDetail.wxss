@@ -51,6 +51,41 @@
   line-height: 1.7;
 }
 
+.slots-tree {
+  padding: 4rpx 0;
+}
+
+.slot-date-group {
+  margin-bottom: 20rpx;
+}
+
+.slot-date-label {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #1a1a1a;
+  margin-bottom: 12rpx;
+}
+
+.slot-time-item {
+  font-size: 26rpx;
+  color: #1a1a1a;
+  padding: 8rpx 0 8rpx 24rpx;
+  border-left: 4rpx solid #0052d9;
+  margin-bottom: 8rpx;
+}
+
+.slot-disabled {
+  color: #bbb;
+  border-left-color: #ddd;
+}
+
+.collapse-content {
+  font-size: 28rpx;
+  color: #666;
+  line-height: 1.7;
+  padding: 4rpx 0;
+}
+
 .criteria-item {
   font-size: 26rpx;
   color: #666;

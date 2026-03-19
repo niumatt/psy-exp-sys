@@ -1,0 +1,115 @@
+<view class="container">
+  <view wx:if="{{!exp}}" class="loading-tip">加载中...</view>
+
+  <block wx:if="{{exp}}">
+    <t-cell-group theme="card">
+      <t-cell title="实验名称" note="{{exp.title}}" />
+      <t-cell title="实验报酬" note="{{exp.reward}}" t-class-note="reward-highlight" />
+
+      <t-cell
+        wx:if="{{slotsTree.length > 0}}"
+        title="选择时间"
+        note="{{selectedSlotLabel || '请选择'}}"
+        hover
+        arrow
+        required="{{!selectedSlotId}}"
+        bind:click="openSlotSelect"
+      />
+
+      <t-cell
+        wx:if="{{hasSurvey}}"
+        title="筛选问卷"
+        hover
+        arrow
+        note="{{surveyFilled ? '已填写' : '请填写'}}"
+        required="{{!surveyFilled}}"
+        bind:click="handleSurvey"
+      />
+
+      <t-cell
+        wx:if="{{hasCriteria}}"
+        title="实验须知"
+        note="{{criteriaConfirmed ? '已确认' : '请确认'}}"
+        hover
+        arrow
+        required="{{!criteriaConfirmed}}"
+        bind:click="openCriteria"
+      />
+    </t-cell-group>
+
+    <view class="apply-area">
+      <t-button
+        theme="primary"
+        size="large"
+        block
+        content="确认报名"
+        disabled="{{(slotsTree.length > 0 && !selectedSlotId) || (hasSurvey && !surveyFilled) || (hasCriteria && !criteriaConfirmed)}}"
+        bind:tap="handleApply"
+      />
+    </view>
+  </block>
+</view>
+
+<!-- 实验须知 popup -->
+<t-popup
+  visible="{{popupVisible}}"
+  placement="bottom"
+  bind:visible-change="onVisibleChange"
+>
+  <view class="popup-block">
+    <view class="popup-header">
+      <view class="popup-btn popup-btn--cancel" bind:tap="cancelCriteria">取消</view>
+      <view class="popup-title">实验须知</view>
+      <view class="popup-btn popup-btn--confirm" bind:tap="confirmCriteria">确定</view>
+    </view>
+    <scroll-view class="popup-body" scroll-y>
+      <t-checkbox-group bind:change="onCriteriaChange">
+        <view
+          wx:for="{{exp.criteria}}"
+          wx:key="index"
+          class="criteria-row"
+        >
+          <t-checkbox value="{{index}}" label="{{item}}" />
+        </view>
+      </t-checkbox-group>
+    </scroll-view>
+  </view>
+</t-popup>
+
+<!-- 时间选择 popup -->
+<t-popup
+  visible="{{slotPopupVisible}}"
+  placement="bottom"
+  bind:visible-change="onSlotPopupVisibleChange"
+>
+  <view class="popup-block">
+    <view class="popup-header">
+      <view class="popup-btn popup-btn--cancel" bind:tap="cancelSlotSelect">取消</view>
+      <view class="popup-title">选择时间</view>
+      <view class="popup-btn popup-btn--confirm" bind:tap="confirmSlotSelect">确定</view>
+    </view>
+    <view class="popup-body popup-body--tree">
+      <view class="tree-left">
+        <view
+          wx:for="{{slotsTree}}"
+          wx:key="value"
+          class="tree-date-item {{activeDateIndex === index ? 'tree-date-item--active' : ''}}"
+          bind:tap="onDateSelect"
+          data-index="{{index}}"
+        >{{item.label}}</view>
+      </view>
+      <scroll-view class="tree-right" scroll-y>
+        <view
+          wx:for="{{slotsTree[activeDateIndex].children}}"
+          wx:key="value"
+          class="tree-slot-item {{item.disabled ? 'tree-slot-item--disabled' : ''}} {{selectedSlotId === item.value ? 'tree-slot-item--selected' : ''}}"
+          bind:tap="onSlotSelect"
+          data-slot="{{item}}"
+        >
+          <view class="tree-slot-label">{{item.label}}</view>
+          <t-icon wx:if="{{selectedSlotId === item.value}}" name="check" size="36rpx" color="#0052d9" />
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+</t-popup>

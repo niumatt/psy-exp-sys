@@ -1,6 +1,7 @@
 App({
   globalData: {
     subjectId: null,
+    openid: null,
     answeredExpIds: {},
     pendingAnsweredExpId: null,
     pendingQuestionaryId: null
@@ -14,8 +15,10 @@ App({
     db.collection('Subjects').get({
       success: (res) => {
         if (res.data.length > 0) {
-          this.globalData.subjectId = res.data[0]._id;
-          console.log('当前用户姓名：', res.data[0].realName);
+          const subject = res.data[0];
+          this.globalData.subjectId = subject._id;
+          this.globalData.openid = subject._openid;
+          console.log('当前用户姓名：', subject.realName);
         }
       },
       fail: (err) => {
@@ -30,15 +33,13 @@ App({
     const extraData = options.referrerInfo && options.referrerInfo.extraData;
     if (!(extraData && extraData.status === 'answered')) return;
 
-    const { pendingAnsweredExpId, pendingQuestionaryId, subjectId } = this.globalData;
-    if (!pendingQuestionaryId || !subjectId) return;
+    const { pendingAnsweredExpId, pendingQuestionaryId, openid } = this.globalData;
+    if (!pendingQuestionaryId || !openid) return;
 
-    // 将当前用户写入 QuestionaryRecords.finishedSubjects
-    const db = wx.cloud.database();
-    db.collection('QuestionaryRecords').doc(pendingQuestionaryId).update({
-      data: {
-        finishedSubjects: db.command.push(subjectId)
-      }
+    // 将当前用户写入 QuestionaryRecords.finishedSubjects（云函数保证有写权限）
+    wx.cloud.callFunction({
+      name: 'markSurveyFinished',
+      data: { questionaryId: pendingQuestionaryId }
     });
 
     this.globalData.answeredExpIds[pendingAnsweredExpId] = true;

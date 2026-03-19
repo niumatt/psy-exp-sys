@@ -1,24 +1,42 @@
-// 腾讯问卷：https://wj.qq.com/s2/{sid}/{hash}/
-function parseTxwjUrl(url) {
-  const parts = url.replace(/\/$/, '').split('/');
-  return {
-    sid: parts[parts.length - 2],
-    hash: parts[parts.length - 1]
-  };
+function buildSlotsTree(slots) {
+  const dateMap = {};
+  slots.forEach(slot => {
+    const date = new Date(slot.startTime);
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateKey = `${date.getFullYear()}-${month}-${day}`;
+    const dateLabel = `${month}月${day}日`;
+    const startHours = String(date.getHours()).padStart(2, '0');
+    const startMinutes = String(date.getMinutes()).padStart(2, '0');
+    const endDate = new Date(date.getTime() + slot.durationMinutes * 60000);
+    const endHours = String(endDate.getHours()).padStart(2, '0');
+    const endMinutes = String(endDate.getMinutes()).padStart(2, '0');
+    const availability = slot.status === 'active' ? '可报名' : '不可报名';
+    const timeLabel = `${startHours}:${startMinutes} - ${endHours}:${endMinutes}（${availability}）`;
+
+    if (!dateMap[dateKey]) {
+      dateMap[dateKey] = { label: dateLabel, value: dateKey, children: [] };
+    }
+    dateMap[dateKey].children.push({
+      label: timeLabel,
+      value: slot._id,
+      disabled: slot.status !== 'active'
+    });
+  });
+
+  return Object.keys(dateMap).sort().map(k => dateMap[k]);
 }
 
 Page({
   data: {
     exp: null,
-    questionary: null,
-    hasSurvey: false,
-    surveyFilled: false,
-    applyDisabled: false
+    slotsTree: [],
+    treeSelectKeys: { label: 'label', value: 'value', children: 'children' }
   },
 
   onLoad(options) {
     // TODO: 开发调试用，上线前删除
-    const expId = options.id || '7a85e5d469ba82ba0008628928ff984a';
+    const expId = options.id || '7a85e5d469bb9bf6000a16d82d1d15c3';
 
     if (!expId) {
       console.error('expDetail: 缺少 id 参数', options);
@@ -27,38 +45,11 @@ Page({
     }
 
     const db = wx.cloud.database();
-
     db.collection('Experiments').doc(expId).get({
-      success: (expRes) => {
-        const exp = expRes.data;
-
-        if (!exp.questionaryId) {
-          this.setData({ exp, hasSurvey: false, applyDisabled: false });
-          return;
-        }
-
-        db.collection('QuestionaryRecords').doc(exp.questionaryId).get({
-          success: (qRes) => {
-            const questionary = qRes.data;
-            const hasSurvey = questionary.type !== 'none';
-            const subjectId = getApp().globalData.subjectId;
-            const surveyFilled = hasSurvey &&
-              Array.isArray(questionary.finishedSubjects) &&
-              questionary.finishedSubjects.includes(subjectId);
-
-            this.setData({
-              exp,
-              questionary,
-              hasSurvey,
-              surveyFilled,
-              applyDisabled: hasSurvey && !surveyFilled
-            });
-          },
-          fail: (err) => {
-            console.error('获取问卷记录失败', err);
-            this.setData({ exp, hasSurvey: false, applyDisabled: false });
-          }
-        });
+      success: (res) => {
+        const exp = res.data;
+        this.setData({ exp });
+        this._loadSlots(db, exp.slotIds);
       },
       fail: (err) => {
         console.error('获取实验失败', err);
@@ -67,86 +58,22 @@ Page({
     });
   },
 
-  onShow() {
-    if (!this.data.hasSurvey || this.data.surveyFilled) return;
+  _loadSlots(db, slotIds) {
+    if (!Array.isArray(slotIds) || slotIds.length === 0) return;
 
-    // 腾讯问卷：App.onShow 已写库，此处只更新本地状态
-    const app = getApp();
-    const expId = this.data.exp && this.data.exp._id;
-    if (app.globalData.answeredExpIds[expId]) {
-      this.setData({ surveyFilled: true, applyDisabled: false });
-      return;
-    }
-
-    // 问卷星：弹框手动确认后写库
-    if (this._waitingWjxReturn) {
-      this._waitingWjxReturn = false;
-      wx.showModal({
-        title: '问卷确认',
-        content: '是否已完成筛选问卷？',
-        confirmText: '已完成',
-        cancelText: '未完成',
-        success: (res) => {
-          if (!res.confirm) return;
-
-          const subjectId = getApp().globalData.subjectId;
-          const db = wx.cloud.database();
-          db.collection('QuestionaryRecords').doc(this.data.questionary._id).update({
-            data: {
-              finishedSubjects: db.command.push(subjectId)
-            }
-          });
-
-          getApp().globalData.answeredExpIds[expId] = true;
-          this.setData({ surveyFilled: true, applyDisabled: false });
-        }
+    Promise.all(slotIds.map(id => db.collection('Slots').doc(id).get()))
+      .then(results => {
+        const slots = results.map(r => r.data);
+        this.setData({ slotsTree: buildSlotsTree(slots) });
+      })
+      .catch(err => {
+        console.error('获取时间段失败', err);
       });
-    }
-  },
-
-  handleSurvey() {
-    const { type, value } = this.data.questionary;
-    if (type === 'txwj') {
-      const app = getApp();
-      app.globalData.pendingAnsweredExpId = this.data.exp._id;
-      app.globalData.pendingQuestionaryId = this.data.questionary._id;
-      const { sid, hash } = parseTxwjUrl(value);
-      wx.openEmbeddedMiniProgram({
-        appId: 'wxebadf544ddae62cb',
-        path: `pages/webview/index?sid=${sid}&hash=${hash}&navigateBackMiniProgram=true`
-      });
-    } else if (type === 'wjx') {
-      this._waitingWjxReturn = true;
-      wx.openEmbeddedMiniProgram({
-        appId: 'wxd947200f82267e58',
-        path: `pages/wjxqList/wjxqList?activityId=${value}`
-      });
-    }
   },
 
   handleApply() {
-    if (this.data.applyDisabled) {
-      wx.showToast({ title: '请填写筛选问卷后报名', icon: 'none' });
-      return;
-    }
-
-    const db = wx.cloud.database();
-    db.collection('Appointments').add({
-      data: {
-        expId: this.data.exp._id,
-        subjectId: getApp().globalData.subjectId,
-        appointmentStatus: 1,
-        rewardStatus: 0,
-        isCanceled: 0,
-        createTime: db.serverDate()
-      },
-      success: () => {
-        wx.showToast({ title: '报名成功', icon: 'success' });
-      },
-      fail: (err) => {
-        console.error('报名失败', err);
-        wx.showToast({ title: '报名失败，请重试', icon: 'error' });
-      }
+    wx.navigateTo({
+      url: `/pages/expSignUp/expSignUp?id=${this.data.exp._id}`
     });
   }
 });

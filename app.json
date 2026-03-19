@@ -1,9 +1,12 @@
 {
   "pages": [
     "pages/expDetail/expDetail",
-    "pages/home/home"
+    "pages/home/home",
+    "pages/expSignUp/expSignUp"
   ],
   "usingComponents": {
+    "t-popup": "tdesign-miniprogram/popup/popup",
+    "t-tree-select": "tdesign-miniprogram/tree-select/tree-select",
     "t-cell": "tdesign-miniprogram/cell/cell",
     "t-cell-group": "tdesign-miniprogram/cell-group/cell-group",
     "t-collapse": "tdesign-miniprogram/collapse/collapse",
