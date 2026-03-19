@@ -1,0 +1,89 @@
+<view class="detail-container">
+  <view wx:if="{{!exp}}" class="loading-tip">加载中...</view>
+  <view wx:if="{{exp}}" class="header-section">
+    <view class="main-title">{{exp.title}}</view>
+    <view class="tag-row">
+      <t-tag theme="success" variant="light" size="small">{{exp.status}}</t-tag>
+      <t-tag 
+        wx:for="{{exp.tags}}" 
+        wx:key="index" 
+        theme="primary" 
+        variant="light" 
+        size="medium"
+      >{{item}}</t-tag>
+    </view>
+  </view>
+
+  <block wx:if="{{exp}}">
+    <t-cell-group theme="card">
+      <t-cell 
+        title="实验报酬" 
+        note="{{exp.reward}}" 
+        t-class-note="reward-highlight" 
+        left-icon="thumb-up"
+      />
+      <t-cell 
+        title="实验地点" 
+        note="{{exp.location}}" 
+        left-icon="location" 
+      />
+      <t-cell 
+        title="预计时长" 
+        note="{{exp.expDurationMinutes}} 分钟" 
+        left-icon="time" 
+      />
+      <t-cell 
+        title="主试人员" 
+        note="{{exp.researcherName}}" 
+        left-icon="user" 
+      />
+      <t-cell 
+        title="当前报名" 
+        note="{{exp.participantCount}} / 50" 
+        left-icon="chart-bar" 
+      />
+    </t-cell-group>
+
+    <t-divider />
+
+    <t-cell-group theme="card">
+      <t-cell 
+        title="实验简介" 
+        description="{{exp.description || ''}}" 
+        left-icon="info-circle" 
+      />
+      <t-cell title="招募要求" left-icon="info-circle">
+        <view slot="description">
+          <view 
+            wx:for="{{exp.criteria}}" 
+            wx:key="index" 
+            class="criteria-item"
+          >{{item}}</view>
+        </view>
+      </t-cell>
+    </t-cell-group>
+
+    <view wx:if="{{hasSurvey}}" class="survey-area">
+      <t-button
+        theme="primary"
+        size="medium"
+        block="{{false}}"
+        t-class="apply-btn"
+        disabled="{{surveyFilled}}"
+        content="{{surveyFilled ? '已填写' : '填写问卷'}}"
+        bind:tap="handleSurvey"
+      />
+    </view>
+
+    <view class="apply-area">
+      <t-button 
+        theme="primary" 
+        size="medium" 
+        block="{{false}}"
+        t-class="apply-btn{{applyDisabled ? ' apply-btn-disabled' : ''}}"
+        content="立即报名" 
+        bind:tap="handleApply" 
+      />
+    </view>
+  </block>
+</view>
